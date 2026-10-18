@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2
+from scipy.optimize import minimize
 
 class TetradTest(ABC):
     '''
@@ -62,9 +63,10 @@ class TetradTest(ABC):
         '''
         pass
 
+    @abstractmethod
     def reject(self, alpha=0.05):
         '''
-        Determine whether to reject the null hypothesis based on the computed p-value.
+        Abstract method to determine whether to reject the null hypothesis based on the computed p-value.
 
         Parameters:
         alpha (float): Significance level for the test.
@@ -72,8 +74,7 @@ class TetradTest(ABC):
         Returns:
         bool: True if the null hypothesis is rejected, False otherwise.
         '''
-        p_value = self.compute_p_value()
-        return p_value < alpha
+        pass
 
 
 
@@ -211,3 +212,270 @@ class ClassicalTetradTest(TetradTest):
         p_value = chi2.sf(test_statistic, df=2)
 
         return p_value
+
+    def reject(self, alpha=0.05):
+        '''
+        Determine whether to reject the null hypothesis based on the computed p-value.
+
+        Parameters:
+        alpha (float): Significance level for the test.
+
+        Returns:
+        bool: True if the null hypothesis is rejected, False otherwise.
+        '''
+        p_value = self.compute_p_value()
+        return p_value < alpha
+
+class GeneralizedTetradTestGMM(TetradTest):
+    '''
+    Implement the generalized tetrad test, with the bridge function estimated by GMM.
+    '''
+
+    def _estimate_bridge_function(self, bridge_function_type):
+        '''
+        Estimate the bridge function using GMM. The bridge function is assumed to be linear 
+        i.e. B = theta_0 + theta_1 * A
+
+        Parameters:
+        bridge_function_type (str): The type of bridge function to be estimated. If "h", then the Y-W bridge function is estimated; 
+            if "g", then the Y-Z bridge function is estimated.
+
+        Returns:
+        callable: The estimated bridge function.
+        '''
+        # Sanity check
+        if bridge_function_type not in ["h", "g"]:
+            raise ValueError("bridge_function_type must be either 'h' or 'g'.")
+
+        if bridge_function_type == "h":
+            A = self.W
+            instrument = self.Z
+        else:
+            A = self.Z
+            instrument = self.W
+
+        # Moment function used for GMM
+        def moment_function(theta):
+            theta_0, theta_1 = theta
+            B_hat = theta_0 + theta_1 * A
+            moments = np.column_stack([
+                (self.Y - B_hat),
+                (self.Y - B_hat) * instrument
+            ])
+            return moments
+
+        # Function to compute the GMM objective
+        def gmm_objective(theta, moment_function, weight_matrix):
+            moments = moment_function(theta)
+            mean_moments = np.mean(moments, axis=0)
+            return mean_moments.T @ weight_matrix @ mean_moments
+
+        # Estimate the parameter of the bridge function
+        result = minimize(
+                    gmm_objective,
+                    x0=np.zeros(2),
+                    args=(moment_function, np.eye(2)),
+                    method="BFGS"
+                 )
+        theta_hat = result.x
+
+        # Function that represents the bridge function based on the estimated parameters
+        def estimated_bridge_function(C):
+            return theta_hat[0] + theta_hat[1] * C
+
+        return estimated_bridge_function
+
+    def _compute_delta_matrix(self):
+        '''
+        Compute the delta matrix as defined in equation (11) in the generalized tetrad paper.
+
+        Returns:
+        np.ndarray: The computed delta matrix.
+        '''
+        abs_diff_matrix = np.abs(np.subtract.outer(self.X, self.X))
+        term_1 = np.add.outer(np.sum(abs_diff_matrix, axis=0), np.sum(abs_diff_matrix, axis=1)) / self.N
+        term_2 = np.sum(abs_diff_matrix) / (self.N)**2
+
+        return abs_diff_matrix - term_1 + term_2
+
+    def _compute_mgtn(self, delta_matrix, bridge_function, bridge_function_type):
+        '''
+        Compute the mgtn vector as defined in equation (12) in the generalized tetrad paper.
+
+        Parameters:
+        delta_matrix (np.ndarray): The computed delta matrix.
+        bridge_function (callable): The estimated bridge function.
+        bridge_function_type (str): The type of bridge function to be used. If "h", then the Y-W bridge function is used; 
+            if "g", then the Y-Z bridge function is used.
+
+        Returns:
+        np.ndarray: The computed mgtn vector.
+        '''
+        # Sanity check
+        if bridge_function_type not in ["h", "g"]:
+            raise ValueError("bridge_function must be either 'h' or 'g'.")
+
+        if bridge_function_type == "h":
+            self.A = self.W
+        else:
+            self.A = self.Z
+
+        # Compute the residuals R(h) = Y - h(A) or R(g) = Y - g(A), and center them
+        residuals = self.Y - bridge_function(self.A)
+        centered_residuals = residuals - np.mean(residuals)
+
+        # Compute the quadratic form inside the square root of MGT_n
+        quadratic_form = (centered_residuals / self.N).T @ delta_matrix @ (centered_residuals / self.N)
+
+        return np.sqrt(-quadratic_form)
+
+    def _compute_phi_s(self, s, bridge_function, bridge_function_type):
+        """
+        Compute phi_hat_s(O_j; bridge) as defined in Section 4.2 of the generalized tetrad paper.
+
+        Parameters:
+        s (float): The value of s for which to compute phi_hat_s.
+        bridge_function (callable): The estimated bridge function.
+        bridge_function_type (str): The type of bridge function to be used. If "h", then the Y-W bridge function is used; if "g", then the Y-Z bridge function is used.
+
+        Returns:
+        np.ndarray: The computed phi_hat_s(O_j; bridge) for all observations, with shape (N,).
+        """
+        if bridge_function_type == "h":
+            proxy = self.W
+            instrument = self.Z
+        elif bridge_function_type == "g":
+            proxy = self.Z
+            instrument = self.W
+        else:
+            raise ValueError("bridge_function_type must be 'h' or 'g'.")
+
+        # Calculate GMM moment functions
+        D = np.column_stack([np.ones(self.N), proxy])
+        B = np.column_stack([np.ones(self.N), instrument])
+
+        residuals = self.Y - bridge_function(proxy)
+        J = residuals[:, None] * B
+
+        # Estimate Sigma_1
+        M = -(B.T @ D) / self.N
+
+        # Sigma_1 = M^{-1} because the GMM is just identified
+        Sigma_1 = np.linalg.solve(M, np.eye(2))
+
+        # Calculate the exponentiated values
+        exp_values = np.exp(1j * s * self.X)
+
+        C = (
+            D.T @ exp_values / self.N
+            - D.mean(axis=0) * exp_values.mean()
+        )
+
+        # Step 4: Compute phi_hat_s for all observations
+        phi_s = C @ Sigma_1 @ J.T
+
+        return phi_s
+
+    def _compute_sn(self, bridge_function, bridge_function_type, s_grid=None):
+        '''
+        Compute S_n as defined in Equation (12) in the generalized tetrad paper.
+
+        Parameters:
+        bridge_function (callable): The estimated bridge function.
+        bridge_function_type (str): The type of bridge function to be used. If "h", then the Y-W bridge function is used; if "g", then the Y-Z bridge function is used.
+        s_grid (np.ndarray, optional): A grid of s values for numerical integration. If None, a default grid will be used.
+
+        Returns:
+        float: The computed S_n value.
+        '''
+        if bridge_function_type == "h":
+            proxy = self.W
+        elif bridge_function_type == "g":
+            proxy = self.Z
+        else:
+            raise ValueError("Invalid bridge function type.")
+
+        residuals = self.Y - bridge_function(proxy)
+
+        if s_grid is None:
+            s_grid = np.linspace(0.001, 300, 10000)
+
+        integrand = np.zeros(len(s_grid))
+
+        for idx, s in enumerate(s_grid):
+            exp_values = np.exp(1j * s * self.X)
+
+            # Compute phi_hat_s(O_j; bridge) for all observations
+            phi_s = self._compute_phi_s(
+                s, bridge_function, bridge_function_type
+            )
+
+            # Compute the expression inside absolute value in Equation (12)
+            terms = (
+                residuals * (exp_values - exp_values.mean())
+                + phi_s
+            )
+
+            integrand[idx] = np.sum(np.abs(terms)**2) / s**2
+
+        # Integrate over positive s and multiply by 2
+        sn = (2 / (self.N * np.pi)) * np.trapezoid(
+            integrand, s_grid
+        )
+
+        return sn
+
+    def compute_test_statistic(self):
+        '''
+        Compute the test statistic for the generalized tetrad test.
+
+        Returns:
+        float: The computed test statistic.
+        '''
+        # Estimate the bridge functions
+        h_hat = self._estimate_bridge_function(bridge_function_type="h")
+        g_hat = self._estimate_bridge_function(bridge_function_type="g")
+
+        # Compute the delta matrix
+        delta_matrix = self._compute_delta_matrix()
+
+       # Compute MGT_n for both bridge functions
+        mgtn_h = self._compute_mgtn(delta_matrix, h_hat, bridge_function_type="h")
+        mgtn_g = self._compute_mgtn(delta_matrix, g_hat, bridge_function_type="g")
+
+        # Compute S_n for both bridge functions
+        sn_h = self._compute_sn(h_hat, bridge_function_type="h")
+        sn_g = self._compute_sn(g_hat, bridge_function_type="g")
+
+        # Compute the test statistic as the maximum of the two S_n values
+        test_statistic = self.N * (mgtn_h**2 + mgtn_g**2) / (sn_h + sn_g)
+
+        return test_statistic
+
+    def compute_p_value(self):
+        '''
+        Compute the p-value for the generalized tetrad test based on the test statistic.
+
+        Returns:
+        float: The computed p-value.
+        '''
+        # Compute the test statistic
+        test_statistic = self.compute_test_statistic()
+
+        # Compare the test statistic to a chi-squared distribution with 1 degrees of freedom
+        p_value = chi2.sf(test_statistic, df=1)
+
+        return p_value
+
+    def reject(self, alpha=0.05):
+        '''
+        Determine whether to reject the null hypothesis based on the computed p-value.
+
+        Parameters:
+        alpha (float): Significance level for the test.
+
+        Returns:
+        bool: True if the null hypothesis is rejected, False otherwise.
+        '''
+        p_value = self.compute_p_value()
+        return p_value < alpha
