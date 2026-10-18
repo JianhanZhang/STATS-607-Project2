@@ -40,7 +40,11 @@ The performance of the methods are evaluated based on the empirical rejection pr
 
 ## Simulation design matrix
 
-The simulation study considers five settings, as summarized below.
+The simulation study consists of 4 experiments, which are summarized below.
+
+### Experiment 1
+
+This experiment reproduces Table 2 in the original generalized tetrad paper.
 
 | Setting | $\alpha_2$ | $\beta_2$ | $\delta$ | $H_0$ |
 |---|---|---|---|---|
@@ -52,6 +56,64 @@ The simulation study considers five settings, as summarized below.
 
 For each setting, we consider sample sizes $n=500$ and
 $n=1000$, with 1,000 replications per sample size.
-The significance level is fixed at 0.05.
+The significance level is fixed at 0.05. The result will be summarized in a table.
 
+### Experiment 2
 
+This experiment investigates how the methods' performance vary with $\alpha_2$.
+
+| Setting | $\alpha_2$ | $\beta_2$ | $\delta$ | $H_0$ |
+|---|---|---|---|---|
+| I | 0 | 0 | 0 | True |
+| II | 0.1 | 0 | 0 | True |
+| III | 0.2 | 0 | 0 | True |
+| IV | 0.3 | 0 | 0 | True |
+| V | 0.4 | 0 | 0 | True |
+| VI | 0.5 | 0 | 0 | True |
+| VII | 0.6 | 0 | 0 | True |
+| VIII | 0.7 | 0 | 0 | True |
+| IX | 0.8 | 0 | 0 | True |
+| X | 0.9 | 0 | 0 | True |
+
+For each setting, we consider sample size $n=1000$, with 100 replications.
+The significance level is fixed at 0.05. The result will be summarized as a line plot.
+
+### Experiment 3
+
+This experiment investigates how the methods' performance vary with $\beta_2$.
+
+| Setting | $\alpha_2$ | $\beta_2$ | $\delta$ | $H_0$ |
+|---|---|---|---|---|
+| I | 0 | 0 | 0 | True |
+| II | 0 | 0.1 | 0 | True |
+| III | 0 | 0.2 | 0 | True |
+| IV | 0 | 0.3 | 0 | True |
+| V | 0 | 0.4 | 0 | True |
+| VI | 0 | 0.5 | 0 | True |
+| VII | 0 | 0.6 | 0 | True |
+| VIII | 0 | 0.7 | 0 | True |
+| IX | 0 | 0.8 | 0 | True |
+| X | 0 | 0.9 | 0 | True |
+
+For each setting, we consider sample size $n=1000$, with 100 replications.
+The significance level is fixed at 0.05. The result will be summarized as a line plot.
+
+### Experiment 4
+
+This experiment investigates how the methods' performance vary with $\delta$.
+
+| Setting | $\alpha_2$ | $\beta_2$ | $\delta$ | $H_0$ |
+|---|---|---|---|---|
+| I | 0 | 0 | 0 | True |
+| II | 0 | 0 | 0.1 | False |
+| III | 0 | 0 | 0.2 | False |
+| IV | 0 | 0 | 0.3 | False |
+| V | 0 | 0 | 0.4 | False |
+| VI | 0 | 0 | 0.5 | False |
+| VII | 0 | 0 | 0.6 | False |
+| VIII | 0 | 0 | 0.7 | False |
+| IX | 0 | 0 | 0.8 | False |
+| X | 0 | 0 | 0.9 | False |
+
+For each setting, we consider sample size $n=1000$, with 100 replications.
+The significance level is fixed at 0.05. The result will be summarized as a line plot.
