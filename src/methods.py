@@ -226,6 +226,8 @@ class ClassicalTetradTest(TetradTest):
         p_value = self.compute_p_value()
         return p_value < alpha
 
+
+
 class GeneralizedTetradTestGMM(TetradTest):
     '''
     Implement the generalized tetrad test, with the bridge function estimated by GMM.
@@ -479,3 +481,277 @@ class GeneralizedTetradTestGMM(TetradTest):
         '''
         p_value = self.compute_p_value()
         return p_value < alpha
+
+
+
+class GeneralizedTetradTestPSMD(TetradTest):
+    '''
+    Generalized tetrad test with bridge functions estimated by penalized sieve minimum distance (PSMD).
+
+    The bridge functions use cubic polynomial sieves, and the conditioning
+    functions use degree-six polynomial sieves. The class inherits the MGT,
+    test-statistic, and p-value computations from GeneralizedTetradTestGMM.
+    '''
+
+    def __init__(self, X, Y, Z, W, penalty_weight=4e-5):
+        '''
+        Initialize the generalized tetrad test with PSMD-estimated bridge functions.
+
+        Parameters:
+        X (np.ndarray): One-dimensional observed variable X, with shape (N,).
+        Y (np.ndarray): One-dimensional observed variable Y, with shape (N,).
+        Z (np.ndarray): One-dimensional observed variable Z, with shape (N,).
+        W (np.ndarray): One-dimensional observed variable W, with shape (N,).
+        penalty_weight (float, optional): Nonnegative coefficient multiplying the
+            PSMD penalty on the bridge function and its derivative. Default is 4e-5.
+
+        Returns:
+        None: Initializes the instance and an empty dictionary of fitted PSMD models.
+        '''
+        super().__init__(X, Y, Z, W)
+        self.penalty_weight = penalty_weight
+        self._psmd_models = {}
+
+    @staticmethod
+    def _polynomial_basis(x, degree):
+        '''
+        Construct a polynomial basis up to a specified degree.
+
+        Parameters:
+        x (np.ndarray): One-dimensional array of input values, with shape (N,).
+        degree (int): Highest nonnegative polynomial degree to include.
+
+        Returns:
+        np.ndarray: Polynomial design matrix with shape (N, degree + 1), whose
+            columns are 1, x, x**2, ..., x**degree.
+        '''
+        return np.polynomial.polynomial.polyvander(np.asarray(x), degree)
+
+    @staticmethod
+    def _polynomial_derivative_basis(x):
+        '''
+        Compute derivatives of the cubic polynomial basis with respect to its input.
+
+        Parameters:
+        x (np.ndarray): One-dimensional array of input values, with shape (N,).
+
+        Returns:
+        np.ndarray: Derivative design matrix with shape (N, 4), whose columns
+            are 0, 1, 2*x, and 3*x**2.
+        '''
+        x = np.asarray(x)
+        return np.column_stack((np.zeros_like(x), np.ones_like(x),
+                                2*x, 3*x**2))
+
+    def _estimate_bridge_function(self, bridge_function_type):
+        '''
+        Estimate a cubic bridge function using penalized sieve minimum distance.
+
+        Parameters:
+        bridge_function_type (str): Specifies the bridge to estimate. "h" estimates
+            the Y-W bridge using Z as the instrument; "g" estimates the Y-Z
+            bridge using W as the instrument.
+
+        Returns:
+        callable: Estimated bridge function. Takes an array of proxy values and
+            returns an np.ndarray of estimated bridge values at those inputs.
+
+        Raises:
+        ValueError: If bridge_function_type is neither "h" nor "g".
+        '''
+        if bridge_function_type == "h":
+            proxy, instrument = self.W, self.Z
+        elif bridge_function_type == "g":
+            proxy, instrument = self.Z, self.W
+        else:
+            raise ValueError("bridge_function_type must be 'h' or 'g'.")
+
+        # Bridge series q=4, instrument regression series k=7.
+        xi = self._polynomial_basis(proxy, 3)
+        p = self._polynomial_basis(instrument, 6)
+        xi_prime = self._polynomial_derivative_basis(proxy)
+
+        # Sieve estimate E[xi(proxy) | instrument] = P_p xi
+        # and E[Y | instrument] = P_p Y, via least-squares projection.
+        predicted_xi = p @ np.linalg.lstsq(p, xi, rcond=None)[0]
+        predicted_y = p @ np.linalg.lstsq(p, self.Y, rcond=None)[0]
+
+        # Sample analogue of Pen(h) = E[h(proxy)^2] + E[h'(proxy)^2].
+        penalty_matrix = (xi.T @ xi + xi_prime.T @ xi_prime) / self.N
+
+        # Minimize mean (Ehat[Y - xi gamma | instrument])^2
+        #          + penalty_weight * gamma.T @ penalty_matrix @ gamma.
+        lhs = (predicted_xi.T @ predicted_xi) / self.N
+        lhs = lhs + self.penalty_weight * penalty_matrix
+        rhs = (predicted_xi.T @ predicted_y) / self.N
+        gamma_hat = np.linalg.solve(lhs, rhs)
+
+        # Generalized inverse of D_hat from Section 4.2.
+        D_hat = predicted_xi.T @ predicted_xi / self.N
+        D_hat_inverse = np.linalg.pinv(D_hat, rcond=1e-10)
+
+        self._psmd_models[bridge_function_type] = {
+            "gamma": gamma_hat,
+            "xi": xi,
+            "predicted_xi": predicted_xi,
+            "D_hat_inverse": D_hat_inverse,
+        }
+
+        def bridge_function(a):
+            '''
+            Evaluate the fitted cubic polynomial bridge function.
+
+            Parameters:
+            a (np.ndarray): One-dimensional array of proxy values at which to evaluate
+                the bridge function.
+
+            Returns:
+            np.ndarray: Fitted bridge-function values, one for each input in a.
+            '''
+            return self._polynomial_basis(a, 3) @ gamma_hat
+
+        return bridge_function
+
+    def _compute_phi_s(self, s, bridge_function, bridge_function_type):
+        '''
+        Compute the PSMD correction term for S_n at a specified frequency s.
+
+        Parameters:
+        s (float): Real frequency used in the complex exponential exp(1j*s*X).
+        bridge_function (callable): Fitted bridge function taking proxy values as
+            input and returning its estimated values.
+        bridge_function_type (str): "h" for the Y-W bridge or "g" for the Y-Z bridge.
+
+        Returns:
+        np.ndarray: Complex-valued PSMD influence-function correction
+            phi_hat_s(O_j) for each observation, with shape (N,).
+
+        Raises:
+        ValueError: If bridge_function_type is neither "h" nor "g".
+        RuntimeError: If the requested bridge function has not yet been estimated.
+        '''
+        if bridge_function_type not in ("h", "g"):
+            raise ValueError("bridge_function_type must be 'h' or 'g'.")
+        if bridge_function_type not in self._psmd_models:
+            raise RuntimeError("Estimate the bridge before computing phi_s.")
+
+        fit = self._psmd_models[bridge_function_type]
+        proxy = self.W if bridge_function_type == "h" else self.Z
+        residuals = self.Y - bridge_function(proxy)
+
+        xi = fit["xi"]
+        predicted_xi = fit["predicted_xi"]
+        D_hat_inverse = fit["D_hat_inverse"]
+
+        exp_values = np.exp(1j * s * self.X)
+        # Gateaux derivative of Lambda_s at h in the sieve directions xi.
+        d_lambda = -(xi.T @ exp_values / self.N
+                     - xi.mean(axis=0) * exp_values.mean())
+
+        # Ehat[v*(proxy) | instrument] for each observation.
+        conditional_v = predicted_xi @ (D_hat_inverse @ d_lambda)
+        return residuals * conditional_v
+
+    def _compute_sn(self, bridge_function, bridge_function_type, s_grid=None):
+        '''
+        Compute one bridge-specific component of the S_n standardization term.
+
+        By default, evaluate the integral using the centered pairwise-distance
+        identity. If s_grid is supplied, use the inherited numerical Fourier
+        integration routine with the PSMD-specific correction term.
+
+        Parameters:
+        bridge_function (callable): Fitted bridge function taking proxy values as
+            input and returning its estimated values.
+        bridge_function_type (str): "h" for the Y-W bridge or "g" for the Y-Z bridge.
+        s_grid (np.ndarray or None, optional): One-dimensional grid of positive
+            frequency values for numerical integration. If None, use the
+            distance-based calculation. Default is None.
+
+        Returns:
+        float: Estimated component S_n(h) or S_n(g), depending on
+            bridge_function_type.
+
+        Raises:
+        RuntimeError: If the requested bridge function has not yet been estimated
+            when using the distance-based calculation.
+        '''
+        if s_grid is not None:
+            return super()._compute_sn(bridge_function, bridge_function_type,
+                                       s_grid=s_grid)
+        if bridge_function_type not in self._psmd_models:
+            raise RuntimeError("Estimate the bridge before computing S_n.")
+
+        fit = self._psmd_models[bridge_function_type]
+        proxy = self.W if bridge_function_type == 'h' else self.Z
+        residuals = self.Y - bridge_function(proxy)
+
+        # K = -H|X_i-X_j|H; its Fourier representation is Eq. (12).
+        K = -self._compute_delta_matrix()
+        xi_centered = fit['xi'] - fit['xi'].mean(axis=0)
+        G = fit['predicted_xi'] @ fit['D_hat_inverse']
+
+        # For each j, phi_s(j) = R_j * sum_k v_jk * exp(i s X_k),
+        # v_jk = -G[j,:] xi_centered[k,:] / n.
+        cross = -np.sum(K * (G @ xi_centered.T) / self.N, axis=1)
+        small_kernel = xi_centered.T @ K @ xi_centered / self.N**2
+        quadratic = np.einsum('iq,qp,ip->i', G, small_kernel, G,
+                              optimize=True)
+        sn = np.mean(residuals**2 * (np.diag(K) + 2*cross + quadratic))
+        return float(sn)
+
+    def compute_test_statistic(self):
+        '''
+        Compute the test statistic for the generalized tetrad test.
+
+        Returns:
+        float: The computed test statistic.
+        '''
+        # Estimate the bridge functions
+        h_hat = self._estimate_bridge_function(bridge_function_type="h")
+        g_hat = self._estimate_bridge_function(bridge_function_type="g")
+
+        # Compute the delta matrix
+        delta_matrix = self._compute_delta_matrix()
+
+        # Compute MGT_n for both bridge functions
+        mgtn_h = self._compute_mgtn(delta_matrix, h_hat, bridge_function_type="h")
+        mgtn_g = self._compute_mgtn(delta_matrix, g_hat, bridge_function_type="g")
+
+        # Compute S_n for both bridge functions
+        sn_h = self._compute_sn(h_hat, bridge_function_type="h")
+        sn_g = self._compute_sn(g_hat, bridge_function_type="g")
+
+        # Compute the test statistic as the maximum of the two S_n values
+        test_statistic = self.N * (mgtn_h**2 + mgtn_g**2) / (sn_h + sn_g)
+
+        return test_statistic
+
+    def compute_p_value(self):
+        '''
+        Compute the p-value for the generalized tetrad test based on the test statistic.
+
+        Returns:
+        float: The computed p-value.
+        '''
+        # Compute the test statistic
+        test_statistic = self.compute_test_statistic()
+
+        # Compare the test statistic to a chi-squared distribution with 1 degrees of freedom
+        p_value = chi2.sf(test_statistic, df=1)
+
+        return p_value
+
+    def reject(self, alpha=0.05):
+        '''
+        Determine whether to reject the null hypothesis based on the computed p-value.
+
+        Parameters:
+        alpha (float): Significance level for the test.
+
+        Returns:
+        bool: True if the null hypothesis is rejected, False otherwise.
+        '''
+        p_value = self.compute_p_value()
+        return p_value < alpha
+
