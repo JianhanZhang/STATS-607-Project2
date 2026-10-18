@@ -612,6 +612,50 @@ class GeneralizedTetradTestPSMD(TetradTest):
 
         return bridge_function
 
+    def _compute_delta_matrix(self):
+        '''
+        Compute the delta matrix as defined in equation (11) in the generalized tetrad paper.
+
+        Returns:
+        np.ndarray: The computed delta matrix.
+        '''
+        abs_diff_matrix = np.abs(np.subtract.outer(self.X, self.X))
+        term_1 = np.add.outer(np.sum(abs_diff_matrix, axis=0), np.sum(abs_diff_matrix, axis=1)) / self.N
+        term_2 = np.sum(abs_diff_matrix) / (self.N)**2
+
+        return abs_diff_matrix - term_1 + term_2
+
+    def _compute_mgtn(self, delta_matrix, bridge_function, bridge_function_type):
+        '''
+        Compute the mgtn vector as defined in equation (12) in the generalized tetrad paper.
+
+        Parameters:
+        delta_matrix (np.ndarray): The computed delta matrix.
+        bridge_function (callable): The estimated bridge function.
+        bridge_function_type (str): The type of bridge function to be used. If "h", then the Y-W bridge function is used; 
+            if "g", then the Y-Z bridge function is used.
+
+        Returns:
+        np.ndarray: The computed mgtn vector.
+        '''
+        # Sanity check
+        if bridge_function_type not in ["h", "g"]:
+            raise ValueError("bridge_function must be either 'h' or 'g'.")
+
+        if bridge_function_type == "h":
+            self.A = self.W
+        else:
+            self.A = self.Z
+
+        # Compute the residuals R(h) = Y - h(A) or R(g) = Y - g(A), and center them
+        residuals = self.Y - bridge_function(self.A)
+        centered_residuals = residuals - np.mean(residuals)
+
+        # Compute the quadratic form inside the square root of MGT_n
+        quadratic_form = (centered_residuals / self.N).T @ delta_matrix @ (centered_residuals / self.N)
+
+        return np.sqrt(-quadratic_form)
+
     def _compute_phi_s(self, s, bridge_function, bridge_function_type):
         '''
         Compute the PSMD correction term for S_n at a specified frequency s.
