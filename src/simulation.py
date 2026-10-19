@@ -74,22 +74,8 @@ def run_simulations(num_replications, num_samples_list, parameters_list, alpha, 
         'rejection_decision_generalized_psmd': [], 
         'replication_id': []
     }
-    results = {
-        'num_replications': [],
-        'num_samples': [],
-        'alpha_2': [],
-        'beta_2': [],
-        'delta': [],
-        'rejection_rate_classical': [],
-        'rejection_rate_generalized_gmm': [],
-        'rejection_rate_generalized_psmd': []
-    }
     for num_samples in tqdm(num_samples_list, desc="Sample Sizes"):
         for parameters in tqdm(parameters_list, desc="Data-generating Mechanisms"):
-            # Initialize lists to store p-values for each method
-            p_values_classical = []
-            p_values_generalized_gmm = []
-            p_values_generalized_psmd = []
             # Run the tests and record the p-values for each simulation replication
             for i in tqdm(range(num_replications), desc="Simulation Replications"):
                 current_seed = start_seed + i
@@ -98,9 +84,6 @@ def run_simulations(num_replications, num_samples_list, parameters_list, alpha, 
                                             beta_2=parameters[1], 
                                             delta=parameters[2], 
                                             seed=current_seed)
-                p_values_classical.append(result['classical'])
-                p_values_generalized_gmm.append(result['generalized_gmm'])
-                p_values_generalized_psmd.append(result['generalized_psmd'])
                 # Store the raw results
                 raw_results['num_replications'].append(num_replications)
                 raw_results['num_samples'].append(num_samples)
@@ -114,28 +97,12 @@ def run_simulations(num_replications, num_samples_list, parameters_list, alpha, 
                 raw_results['rejection_decision_generalized_gmm'].append(result['generalized_gmm'] < alpha)
                 raw_results['rejection_decision_generalized_psmd'].append(result['generalized_psmd'] < alpha)
                 raw_results['replication_id'].append(i + 1)
-            # Compute the rejection rates for each method
-            rejection_rate_classical = compute_rejection_rate(p_values_classical, alpha)
-            rejection_rate_generalized_gmm = compute_rejection_rate(p_values_generalized_gmm, alpha)
-            rejection_rate_generalized_psmd = compute_rejection_rate(p_values_generalized_psmd, alpha)
-            # Store the results in the dictionary
-            results['num_replications'].append(num_replications)
-            results['num_samples'].append(num_samples)
-            results['alpha_2'].append(parameters[0])
-            results['beta_2'].append(parameters[1])
-            results['delta'].append(parameters[2])
-            results['rejection_rate_classical'].append(rejection_rate_classical)
-            results['rejection_rate_generalized_gmm'].append(rejection_rate_generalized_gmm)
-            results['rejection_rate_generalized_psmd'].append(rejection_rate_generalized_psmd)
 
     # Save and return the results
     df_raw = pd.DataFrame(raw_results)
     if raw_path is not None:
         df_raw.to_csv(raw_path, index=False)
-    df = pd.DataFrame(results)
-    if agg_path is not None:
-        df.to_csv(agg_path, index=False)
-    return df_raw, df
+    return df_raw
 
 
 
