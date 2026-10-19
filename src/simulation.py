@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-from dgps import generate_data
-from methods import ClassicalTetradTest, GeneralizedTetradTestGMM, GeneralizedTetradTestPSMD
-from metrics import compute_rejection_rate
+from src.dgps import generate_data
+from src.methods import ClassicalTetradTest, GeneralizedTetradTestGMM, GeneralizedTetradTestPSMD
+from src.metrics import compute_rejection_rate
 from tqdm import tqdm
 
 def run_one_simulation(num_samples, alpha_2, beta_2, delta, seed):
