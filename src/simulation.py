@@ -4,6 +4,7 @@ from src.dgps import generate_data
 from src.methods import ClassicalTetradTest, GeneralizedTetradTestGMM, GeneralizedTetradTestPSMD
 from src.metrics import compute_rejection_rate
 from tqdm import tqdm
+import time
 
 def run_one_simulation(num_samples, alpha_2, beta_2, delta, seed):
     """
@@ -42,7 +43,7 @@ def run_one_simulation(num_samples, alpha_2, beta_2, delta, seed):
         'generalized_psmd': p_value_generalized_psmd
     }
 
-def run_simulations(num_replications, num_samples_list, parameters_list, alpha, start_seed, raw_path=None, agg_path=None):
+def run_simulations(num_replications, num_samples_list, parameters_list, alpha, start_seed, raw_path=None):
     """
     Run multiple simulation replications.
 
@@ -108,6 +109,8 @@ def run_simulations(num_replications, num_samples_list, parameters_list, alpha, 
 
 # ---------- MAIN SIMULATION DRIVER ----------
 if __name__ == "__main__":
+    wall_start = time.perf_counter()
+    cpu_start = time.process_time()
     # Experiment 1: Reproduce Table 2 in the generalized tetrad test paper
     parameters_list = [
         [0, 0, 0], # Setting I
@@ -116,22 +119,28 @@ if __name__ == "__main__":
         [0, 0, 0.15], # Setting III(a)
         [0, 0, 0.3] # Setting III(b)
     ]
-    run_simulations(num_replications=1000, num_samples_list=[500, 1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_table2.csv', agg_path='results/raw/results_table2.csv')
+    run_simulations(num_replications=1000, num_samples_list=[500, 1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_table2.csv')
 
     # Experiment 2: Fix beta_2 = delta = 0, and vary alpha_2
     parameters_list = []
     for alpha_2 in np.arange(0, 1.0, 0.1):
         parameters_list.append([alpha_2, 0, 0])
-    run_simulations(num_replications=100, num_samples_list=[1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_alpha2.csv', agg_path='results/raw/results_alpha2.csv')
+    run_simulations(num_replications=100, num_samples_list=[1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_alpha2.csv')
 
     # Experiment 3: Fix alpha_2 = delta = 0, and vary beta_2
     parameters_list = []
     for beta_2 in np.arange(0, 1.0, 0.1):
         parameters_list.append([0, beta_2, 0])
-    run_simulations(num_replications=100, num_samples_list=[1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_beta2.csv', agg_path='results/raw/results_beta2.csv')
+    run_simulations(num_replications=100, num_samples_list=[1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_beta2.csv')
 
     # Experiment 4: Fix alpha_2 = beta_2 = 0, and vary delta
     parameters_list = []
     for delta in np.arange(0, 1.0, 0.1):
         parameters_list.append([0, 0, delta])
-    run_simulations(num_replications=100, num_samples_list=[1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_delta.csv', agg_path='results/raw/results_delta.csv')
+    run_simulations(num_replications=100, num_samples_list=[1000], parameters_list=parameters_list, alpha=0.05, start_seed=1, raw_path='results/raw/raw_results_delta.csv')
+
+    wall_end = time.perf_counter()
+    cpu_end = time.process_time()
+
+    print(f"Wall-clock time: {wall_end - wall_start:.4f} seconds")
+    print(f"CPU time:        {cpu_end - cpu_start:.4f} seconds")
