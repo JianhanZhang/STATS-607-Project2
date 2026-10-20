@@ -237,7 +237,6 @@ def make_publication_ready_line_plot(input_path_alpha2, input_path_beta2, input_
         fontsize=10
     )
     fig.tight_layout(rect=[0, 0.06, 1, 1])
-    #fig.tight_layout(rect=[0, 0.14, 1, 0.90])
 
     # Save before displaying
     plt.savefig(
