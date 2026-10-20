@@ -83,7 +83,7 @@ make clean
 
 ## Summary of Key Findings
 
-Under relatively large samples, the generalized tetrad test successfully controls the type I error rate when the null is true and has power close to 1 when the null is false in both linear and nonlinear data-generating mechanisms, while the classical tetrad test is sometimes unreliable when the data-generating mechanism is linear. Moreover, the performance of the generalized tetrad test appears relatively robust as we increase the degree of deviation from linearity.
+Under relatively large samples, the generalized tetrad test successfully controls the type I error rate when the null is true and has power close to 1 when the null is false in both linear and nonlinear data-generating mechanisms, while the classical tetrad test is sometimes unreliable when the data-generating mechanism is linear. Moreover, the performance of the generalized tetrad test with PSMD appears relatively robust as we increase the degree of deviation from linearity.
 
 ## References
 
