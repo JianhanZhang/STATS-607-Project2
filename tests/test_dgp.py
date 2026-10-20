@@ -1,3 +1,5 @@
+'''Implement unit tests for the data-generating mechanism.'''
+
 import numpy as np
 from src.dgps import generate_data
 

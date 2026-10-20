@@ -1,3 +1,5 @@
+'''Implement unit tests for rejection rate computation.'''
+
 import numpy as np
 from src.metrics import compute_rejection_rate
 

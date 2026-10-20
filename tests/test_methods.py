@@ -1,3 +1,5 @@
+'''Implement unit tests for the three tetrad tests.'''
+
 import numpy as np
 from scipy.stats import chi2
 from src.dgps import generate_data
