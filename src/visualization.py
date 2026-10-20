@@ -148,6 +148,17 @@ def make_publication_ready_line_plot(input_path_alpha2, input_path_beta2, input_
         (df_delta, r"delta", r"(c) Fix $\alpha_2=\beta_2=0$, and vary $\delta$")
     ]
 
+    markers = {
+        "CT": "o",
+        "GT1": "s",
+        "GT2": "^"
+    }
+    linestyles = {
+        "CT": "-",
+        "GT1": "--",
+        "GT2": ":"
+    }
+
     for ax, (df, parameter, title) in zip(axes, experiments):
         ax.set_title(title)
 
@@ -170,7 +181,8 @@ def make_publication_ready_line_plot(input_path_alpha2, input_path_beta2, input_
             line, = ax.plot(
                 x,
                 p_hat,
-                marker="o",
+                marker=markers[method],
+                linestyle=linestyles[method],
                 linewidth=2,
                 label=method
             )
