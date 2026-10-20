@@ -1,3 +1,5 @@
+'''Implement functions for aggregating raw simulation results into empirical rejection rate tables.'''
+
 import numpy as np
 import pandas as pd
 from pathlib import Path

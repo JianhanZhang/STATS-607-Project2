@@ -1,3 +1,5 @@
+'''Implement the main simulation driver.'''
+
 import numpy as np
 import pandas as pd
 from src.dgps import generate_data

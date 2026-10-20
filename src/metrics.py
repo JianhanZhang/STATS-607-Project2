@@ -1,3 +1,5 @@
+'''Implement rejection rate computation.'''
+
 import numpy as np
 
 def compute_rejection_rate(p_values, alpha=0.05):

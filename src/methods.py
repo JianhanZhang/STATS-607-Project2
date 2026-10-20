@@ -1,3 +1,5 @@
+'''Implement the three methods: classical tetrad test, generalized tetrad test with GMM, and generalized tetrad test with PSMD.'''
+
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
