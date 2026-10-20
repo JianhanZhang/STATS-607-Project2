@@ -2,7 +2,7 @@
 
 ## Project Description
 
-This repository reproduces the simulation study presented in Section 5 of the paper "A generalized tetrad constraint for testing conditional independence given a latent variable". The full paper can be found [here](https://arxiv.org/abs/2504.14173), and details about simulation objectives and settings implemented in this repository can be found in `ADEMP.md`.
+This repository reproduces the simulation study presented in Section 5 of the paper "A generalized tetrad constraint for testing conditional independence given a latent variable" [2]. The full paper can be found [here](https://arxiv.org/abs/2504.14173), and details about simulation objectives and settings implemented in this repository can be found in `ADEMP.md`.
 
 The tetrad constraint is commonly used to test whether a collection of four variables are mutually independent conditional on an unobserved latent common cause. However, the classical tetrad test, proposed by [1], is only guaranteed to work when the underlying structural equation model is linear. The generalized tetrad constraint paper proposes a generalization of the classical tetrad test that is able to test the conditional independence in possibly nonlinear structural equation models.
 
@@ -14,7 +14,7 @@ To set up the project, first clone the repository and move into the project dire
 
 ```bash
 git clone https://github.com/JianhanZhang/STATS-607-Project2.git
-cd STATS-607-Project1
+cd STATS-607-Project2
 ```
 
 Once in the project directory, run
@@ -82,6 +82,8 @@ make clean
 ## Estimated Runtime
 
 ## Summary of Key Findings
+
+Under relatively large samples, the generalized tetrad test successfully controls the type I error rate when the null is true and has power close to 1 when the null is false in both linear and nonlinear data-generating mechanisms, while the classical tetrad test is sometimes unreliable when the data-generating mechanism is linear. Moreover, the performance of the generalized tetrad test appears relatively robust as we increase the degree of deviation from linearity.
 
 ## References
 

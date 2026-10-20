@@ -1,4 +1,4 @@
-
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from src.metrics import compute_rejection_rate
@@ -41,6 +41,19 @@ def aggregate_results(input_path, output_path, alpha=0.05):
             lambda x: compute_rejection_rate(x, alpha)
         )
     )
+
+    # Compute Monte Carlo standard errors
+    for method in [
+        "classical",
+        "generalized_gmm",
+        "generalized_psmd"
+    ]:
+        p_hat = aggregated[f"rejection_rate_{method}"]
+        R = aggregated["num_replications"]
+
+        aggregated[f"mcse_{method}"] = np.sqrt(
+            p_hat * (1 - p_hat) / R
+        )
 
     # Save the aggregated results
     aggregated.to_csv(output_path, index=False)

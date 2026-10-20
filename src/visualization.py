@@ -153,12 +153,33 @@ def make_publication_ready_line_plot(input_path_alpha2, input_path_beta2, input_
         df = df.sort_values(parameter)
 
         for method, column in methods.items():
-            ax.plot(
-                df[parameter],
-                df[column],
+            x = df[parameter].to_numpy()
+            p_hat = df[column].to_numpy()
+            mcse_column = column.replace(
+                "rejection_rate_", "mcse_"
+            )
+            mcse = df[mcse_column].to_numpy()
+
+            # Approximate 95% Monte Carlo confidence interval
+            lower = np.maximum(0, p_hat - 1.96 * mcse)
+            upper = np.minimum(1, p_hat + 1.96 * mcse)
+
+            # Plot rejection rates
+            line, = ax.plot(
+                x,
+                p_hat,
                 marker="o",
                 linewidth=2,
                 label=method
+            )
+
+            # Add 95% Monte Carlo confidence bands
+            ax.fill_between(
+                x,
+                lower,
+                upper,
+                color=line.get_color(),
+                alpha=0.15
             )
 
         ax.set_title(title)
@@ -195,7 +216,14 @@ def make_publication_ready_line_plot(input_path_alpha2, input_path_beta2, input_
         ncol=4,
         bbox_to_anchor=(0.5, 0.02)
     )
-    fig.tight_layout(rect=[0, 0.14, 1, 0.90])
+    fig.text(
+        0.5, 0.01,
+        "Shaded bands represent approximate 95% Monte Carlo confidence intervals.",
+        ha="center",
+        fontsize=10
+    )
+    fig.tight_layout(rect=[0, 0.06, 1, 1])
+    #fig.tight_layout(rect=[0, 0.14, 1, 0.90])
 
     # Save before displaying
     plt.savefig(
