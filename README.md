@@ -4,7 +4,7 @@
 
 This repository reproduces the simulation study presented in Section 5 of the paper "A generalized tetrad constraint for testing conditional independence given a latent variable" [2]. The full paper can be found [here](https://arxiv.org/abs/2504.14173), and details about simulation objectives and settings implemented in this repository can be found in `ADEMP.md`.
 
-The tetrad constraint is commonly used to test whether a collection of four variables are mutually independent conditional on an unobserved latent common cause. However, the classical tetrad test, proposed by [1], is only guaranteed to work when the underlying structural equation model is linear. The generalized tetrad constraint paper proposes a generalization of the classical tetrad test that is able to test the conditional independence in possibly nonlinear structural equation models.
+The tetrad constraint is commonly used to test whether a collection of four variables are mutually independent conditional on an shared unobserved latent common cause. However, the classical tetrad test, proposed by [1], is only guaranteed to work when the underlying structural equation model is linear. The generalized tetrad constraint paper proposes a generalization of the classical tetrad test that is able to test the conditional independence in possibly nonlinear structural equation models.
 
 ## Setup Instructions
 
@@ -97,7 +97,7 @@ Under relatively large samples, across the settings tested in the simulation, th
 
 ## Declaration of AI Use:
 
-Generative AI is involved in the workflow of this project. Its main contributions include
+Generative AI is involved in the workflow of this project. Its main contributions include:
 
 1. I used AI to help me understand the technical details of the paper, remind me of useful Python syntax and packages, and debug my code.
 2. I used AI to write the `GeneralizedTetradTestPSMD` class because I am not yet very familiar with PSMD.
