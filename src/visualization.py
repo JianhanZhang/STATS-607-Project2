@@ -208,8 +208,6 @@ def make_publication_ready_line_plot(input_path_alpha2, input_path_beta2, input_
     )
 
     # Reference lines for Type I error
-    '''for ax in axes[:2]:
-        ax.axhline(0.05, linestyle="--", color="gray")'''
     for i, ax in enumerate(axes[:2]):
         ax.axhline(
             0.05,
