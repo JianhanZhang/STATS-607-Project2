@@ -93,7 +93,7 @@ An estimated runtime of the full simulation is 14887 seconds (approximately 4 ho
 
 ## Summary of Key Findings
 
-Under relatively large samples, across the settings tested in the simulation, the generalized tetrad test with PSMD successfully controls the type I error rate when the null is true and has power close to 1 when the null is false in both linear and nonlinear data-generating mechanisms, while the classical tetrad test is sometimes unreliable when the data-generating mechanism is nonlinear. Moreover, the generalized tetrad test with PSMD appears to consistently maintain a low Type I error rate as we increase the degree of deviation from linearity.
+Under relatively large samples, across the settings tested in the simulation, the generalized tetrad test with PSMD successfully controls the type I error rate under both linear and nonlinear data-generating mechanisms when the null is true and has power close to 1 under linear data-generating mechanisms when the null is false, while the classical tetrad test is sometimes unreliable when the data-generating mechanism is nonlinear. Moreover, the generalized tetrad test with PSMD appears to consistently maintain a low Type I error rate as we increase the degree of deviation from linearity.
 
 ## References
 
