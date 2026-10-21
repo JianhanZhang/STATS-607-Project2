@@ -95,6 +95,16 @@ An estimated runtime of the full simulation is 14887 seconds (approximately 4 ho
 
 Under relatively large samples, across the settings tested in the simulation, the generalized tetrad test with PSMD successfully controls the type I error rate under both linear and nonlinear data-generating mechanisms when the null is true and has power close to 1 under linear data-generating mechanisms when the null is false, while the classical tetrad test is sometimes unreliable when the data-generating mechanism is nonlinear. Moreover, the generalized tetrad test with PSMD appears to consistently maintain a low Type I error rate as we increase the degree of deviation from linearity.
 
+## Declaration of AI Use:
+
+Generative AI is involved in the workflow of this project. Its main contributions include
+
+1. I used AI to help me understand the technical details of the paper, remind me of useful Python syntax and packages, and debug my code.
+2. I used AI to write the `GeneralizedTetradTestPSMD` class because I am not yet very familiar with PSMD.
+3. I discussed with AI the implementation of some nuanced technical components of `ClassicalTetradTest` and `GeneralizedTetradTestGMM`, such as the implementation of $S_n$ in the generalized tetrad test statistic. I checked the code to make sure that it properly reproduces the original paper.
+4. AI helped draft the plotting functions and raw result aggregation functions with general ideas supplied by me. I then modified the draft code to make sure that they are correct and that their outputs are readable and include all the needed components.
+5. AI helped with creating some docstrings. Where AI assistance is used, I read and modified the corresponding docstrings to make sure that the descriptions are clear and accurate.
+
 ## References
 
 [1] Bollen, K. A. (1990). Outlier screening and a distribution-free test for vanishing tetrads. *Sociological Methods & Research*, 19(1), 80-92.
