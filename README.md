@@ -26,6 +26,14 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+## Testing
+
+The following command runs the unit tests 
+
+```bash
+make test
+```
+
 ## Running the Analysis
 
 The following command runs the simulation and generates raw simulation results
